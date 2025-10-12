@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>TryOn — Puter + Nano Banana</title>
+<script src="https://js.puter.com/v2/"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<style>
+  :root{--bg:#0f1724;--card:#0b1220;--accent:#7c3aed;--muted:#94a3b8;--glass:rgba(255,255,255,0.04)}
+  *{box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial}
+  body{margin:0;background:linear-gradient(180deg,#071029 0%, #071b2a 60%);color:#e6eef8;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .app{width:960px;max-width:96%;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:16px;padding:22px;box-shadow:0 10px 30px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03)}
+  .head{display:flex;align-items:center;gap:16px}
+  .logo{width:64px;height:64px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--accent),#06b6d4);font-weight:700;font-size:22px}
+  h1{margin:0;font-size:20px}
+  p.lead{margin:6px 0 0;color:var(--muted)}
+  .grid{display:grid;grid-template-columns:1fr 360px;gap:18px;margin-top:18px}
+  .card{background:var(--card);padding:14px;border-radius:12px;border:1px solid var(--glass)}
+  .uploader{display:flex;flex-direction:column;gap:10px}
+  label.file{display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:16px;border-radius:8px;border:1px dashed rgba(255,255,255,0.2);cursor:pointer;color:var(--muted);font-size:14px;font-weight:500}
+  input[type=file]{display:none}
+  .preview{display:flex;gap:10px;align-items:center}
+  .preview img{width:160px;height:200px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:#1e293b;color:var(--muted)}
+  .actions{display:flex;gap:10px;margin-top:12px;align-items:center}
+  button.primary{background:linear-gradient(90deg,var(--accent),#06b6d4);border:none;padding:10px 16px;border-radius:10px;color:#021426;font-weight:700;cursor:pointer}
+  button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:8px 12px;border-radius:10px;color:var(--muted);cursor:pointer}
+  .result{display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center}
+  .outimg{width:320px;height:400px;object-fit:cover;border-radius:12px;border:1px solid rgba(255,255,255,0.04);background:linear-gradient(180deg,#071b2a,#052033);display:flex;align-items:center;justify-content:center}
+  .small{font-size:13px;color:var(--muted)}
+  .loader{width:120px;height:120px;border-radius:999px;position:relative}
+  .spark{position:absolute;inset:0;border-radius:999px;box-shadow:0 0 22px rgba(124,58,237,0.12),0 0 60px rgba(6,182,212,0.06) ;}
+  .debug{white-space:pre-wrap;max-height:200px;overflow:auto;background:rgba(0,0,0,0.3);padding:8px;border-radius:8px;margin-top:10px;font-family:monospace;font-size:12px;color:#fff}
+  footer{margin-top:14px;color:var(--muted);font-size:13px;text-align:center}
+  @media (max-width:880px){.grid{grid-template-columns:1fr;}.outimg{width:100%;height:300px}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="head">
+    <div class="logo">TryOn</div>
+    <div>
+      <h1>Virtual Try‑On — Puter + Nano Banana</h1>
+      <p class="lead">Upload a photo of yourself and the dress you like — then click "Try This On".</p>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="uploader">
+        <label class="file">Upload your photo (face & full body)
+          <input id="userFile" type="file" accept="image/*">
+        </label>
+        <label class="file">Upload the dress image (front view)
+          <input id="dressFile" type="file" accept="image/*">
+        </label>
+        <div class="preview">
+          <div>
+            <div class="small">You</div>
+            <img id="userPreview" src="https://via.placeholder.com/160x200?text=Your+Photo" alt="user preview" />
+          </div>
+          <div>
+            <div class="small">Dress</div>
+            <img id="dressPreview" src="https://via.placeholder.com/160x200?text=Dress" alt="dress preview" />
+          </div>
+        </div>
+        <div class="actions">
+          <button class="primary" id="tryBtn">Try This On</button>
+          <button class="ghost" id="clearBtn">Clear</button>
+          <div id="status" class="small" style="min-width:180px"></div>
+        </div>
+        <div class="small" style="margin-top:6px">Tip: choose a dress image with a clear front view.</div>
+        <div id="debugBox" class="debug" style="display:none"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="result">
+        <div class="small">Result Preview</div>
+        <div class="outimg" id="outWrap">
+          <img id="outImg" src="" alt="result" style="max-width:100%;display:none"/>
+          <div id="placeholder" style="color:var(--muted);text-align:center;padding:12px">No result yet — upload images and click <strong>Try This On</strong></div>
+        </div>
+        <div id="loaderArea" style="height:140px;display:none;align-items:center;justify-content:center;flex-direction:column">
+          <div class="loader" id="loader">
+            <div class="spark" id="spark"></div>
+          </div>
+          <div class="small" id="loadingText">Preparing your virtual outfit…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer>Built with Puter.js • Gemini Nano Banana</footer>
+</div>
+
+<script>
+const $ = (s)=>document.querySelector(s);
+const userFile = $('#userFile'), dressFile = $('#dressFile');
+const userPreview = $('#userPreview'), dressPreview = $('#dressPreview');
+const tryBtn = $('#tryBtn'), clearBtn = $('#clearBtn');
+const status = $('#status'), outImg = $('#outImg'), placeholder = $('#placeholder');
+const loaderArea = $('#loaderArea'), loadingText = $('#loadingText'), debugBox = $('#debugBox');
+
+let userBlob=null,dressBlob=null;
+
+function fileToBase64(file){
+  return new Promise((res,rej)=>{
+    const reader=new FileReader();
+    reader.onload=()=>res(reader.result.split(',')[1]);
+    reader.onerror=rej;
+    reader.readAsDataURL(file);
+  });
+}
+
+function previewFile(input, previewEl, assignVar){
+  const f=input.files[0];
+  if(!f) return;
+  previewEl.src=URL.createObjectURL(f);
+  if(assignVar==='user') userBlob=f;
+  if(assignVar==='dress') dressBlob=f;
+}
+
+userFile.addEventListener('change',()=>previewFile(userFile,userPreview,'user'));
+dressFile.addEventListener('change',()=>previewFile(dressFile,dressPreview,'dress'));
+
+clearBtn.addEventListener('click',()=>{
+  userFile.value=''; dressFile.value=''; userPreview.src='https://via.placeholder.com/160x200?text=Your+Photo';
+  dressPreview.src='https://via.placeholder.com/160x200?text=Dress'; outImg.src=''; outImg.style.display='none';
+  placeholder.style.display='block'; status.textContent=''; userBlob=null; dressBlob=null;
+  debugBox.style.display='none'; debugBox.textContent='';
+});
+
+function startLoader(){
+  placeholder.style.display='none'; loaderArea.style.display='flex';
+  gsap.to('#spark',{duration:0.9,scale:1.25,repeat:-1,yoyo:true,ease:'sine.inOut'});
+  gsap.to('#loader',{rotation:360,duration:4,repeat:-1,ease:'linear'});
+  let dot=0; window._interval=setInterval(()=>{
+    dot=(dot+1)%4;
+    loadingText.textContent=['Preparing…','Generating…','Compositing…','Finalizing…'][dot];
+  },1200);
+}
+function stopLoader(){ loaderArea.style.display='none'; clearInterval(window._interval); gsap.killTweensOf('#spark'); gsap.killTweensOf('#loader'); }
+
+async function uploadDressAndGetURL(file){
+  if(!file) throw new Error('No dress file selected');
+  const arr = await puter.fs.upload([file]);
+  if(!arr || !arr[0]) throw new Error('Dress upload returned no file object');
+  const item = arr[0];
+  try{ return await puter.fs.getReadURL(item.path||item.key||item.name); }catch(e){ return item.url||item.publicUrl||item.path||item.key||null; }
+}
+
+function showDebug(obj){
+  debugBox.style.display='block';
+  try{ debugBox.textContent=JSON.stringify(obj,null,2); }catch(e){ debugBox.textContent=String(obj);}
+}
+
+tryBtn.addEventListener('click', async ()=>{
+  if(!userBlob || !dressBlob){ status.textContent='Please upload both images first.'; return; }
+  tryBtn.disabled=true; status.textContent=''; debugBox.style.display='none'; debugBox.textContent=''; startLoader();
+  try{
+    status.textContent='Uploading dress image...';
+    const dressURL = await uploadDressAndGetURL(dressBlob);
+    if(!dressURL) throw new Error('Failed to get dress URL');
+    status.textContent='Preparing your photo...';
+    const userB64 = await fileToBase64(userBlob);
+    const prompt = `Make the person wear the outfit shown at URL: ${dressURL}`;
+    status.textContent='Calling txt2img model...';
+
+    const timeoutMs = 60000;
+    const imgPromise = puter.ai.txt2img(prompt,{
+      model:'gemini-2.5-flash-image-preview',
+      input_image:userB64,
+      input_image_mime_type:userBlob.type
+    });
+    const timeoutPromise = new Promise((_,rej)=>setTimeout(()=>rej(new Error('Model call timed out after '+timeoutMs/1000+'s')),timeoutMs));
+    const result = await Promise.race([imgPromise, timeoutPromise]);
+
+    let finalUrl=null;
+    if(!result) throw new Error('No result from txt2img');
+    if(typeof result==='string') finalUrl=result;
+    else if(result.src) finalUrl=result.src;
+    else if(result.getAttribute) finalUrl=result.getAttribute('src');
+    if(!finalUrl){ showDebug(result); throw new Error('No usable image found. See debug.'); }
+
+    outImg.src=finalUrl; outImg.style.display='block'; placeholder.style.display='none';
+    status.textContent='Done!';
+  }catch(err){
+    console.error(err); status.textContent='Error: '+err.message; showDebug(err);
+  }finally{ tryBtn.disabled=false; stopLoader(); }
+});
+</script>
+</body>
+</html>
